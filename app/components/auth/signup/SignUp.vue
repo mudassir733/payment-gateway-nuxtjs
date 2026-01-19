@@ -1,47 +1,77 @@
 <template>
-    <BaseInput v-model="form.name" label="Full Name" placeholder="John Doe" :error="errors.name" class="w-75" />
-    <BaseButton size="lg" label="Create Account" block :loading="loading" class="w-75" />
-    <BaseTextArea v-model="form.bio" label="Description" placeholder="Write something..." size="lg" width="max-w-xl"
-        :rows="6" resize="both" :error="errors.bio" />
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div class="w-full max-w-md bg-white rounded-xl shadow-sm p-8 space-y-6">
 
-    <BaseSearchInput v-model="search" placeholder="Search products" size="lg" width="max-w-md" @search="onSearch" />
+            <div class="text-center space-y-1">
+                <h1 class="text-2xl font-semibold text-gray-900">
+                    Create Account
+                </h1>
+                <p class="text-sm text-gray-500">
+                    Buy and sell products with ease
+                </p>
+            </div>
 
+            <form class="space-y-4" @submit.prevent="submit">
+                <BaseInput v-model="form.name" label="Full Name" placeholder="John Doe" :error="errors.name"
+                    type="text" />
 
+                <BaseInput v-model="form.email" label="Email" type="email" placeholder="you@example.com"
+                    :error="errors.email" />
 
-    <div class="flex gap-4">
+                <BaseInput v-model="form.password" label="Password" :type="show ? 'text' : 'password'"
+                    placeholder="••••••••" :error="errors.password" :showPassword="true" />
 
-        <BaseButton label="Cancel" bg="bg-transparent" class="hover:bg-transparent" :hoverBg="false" :activeBg="false"
-            text="text-gray-800" :border="true" borderClass="border border-gray-300" :ring="true"
-            ringClass="focus-visible:ring-2 focus-visible:ring-gray-400/40 focus-visible:ring-offset-2" />
+                <BaseInput v-model="form.confirmPassword" label="Confirm Password" type="password"
+                    placeholder="••••••••" :error="errors.confirmPassword" :showPassword="true" />
 
+                <BaseButton label="Create Account" block :loading="loading" />
+            </form>
 
-        <BaseButton label="Continue" bg="bg-black" hoverBg="hover:bg-black/90" activeBg="active:bg-black"
-            text="text-white" :ring="true" />
+            <p class="text-center text-sm text-gray-500">
+                Already have an account?
+                <NuxtLink to="/login" class="text-primary font-medium">
+                    Sign in
+                </NuxtLink>
+            </p>
+        </div>
     </div>
-
-
 </template>
 
-<script setup lang="ts">
-import BaseInput from '~/components/ui/BaseInput.vue';
-import BaseButton from '~/components/ui/BaseButton.vue';
-import BaseTextArea from '~/components/ui/BaseTextArea.vue';
-import BaseSearchInput from '~/components/ui/BaseSearchInput.vue';
-import { reactive, ref } from 'vue'
 
-const form = reactive({
+<script setup lang="ts">
+import { reactive, ref } from 'vue'
+import { registerSchema, type RegisterSchema } from '../../../schemas/register.schema'
+import { ZodError } from 'zod'
+import BaseInput from '~/components/ui/BaseInput.vue'
+import BaseButton from '~/components/ui/BaseButton.vue'
+
+const form = reactive<RegisterSchema>({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    bio: ''
 })
+
 const errors = reactive<Record<string, string>>({})
 const loading = ref(false)
-const search = ref('')
+const show = ref(false)
 
 
-const onSearch = (value: string) => {
-    console.log('Searching for:', value)
+const submit = async () => {
+    Object.keys(errors).forEach(k => delete errors[k])
+
+    try {
+        registerSchema.parse(form)
+        loading.value = true
+
+
+        console.log('Register payload', form)
+
+        loading.value = false
+    } catch (err) {
+        if (err instanceof ZodError) {
+            return err.message
+        }
+    }
 }
 </script>
