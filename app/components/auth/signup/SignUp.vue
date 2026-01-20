@@ -11,7 +11,20 @@
                 </p>
             </div>
 
+            <!-- Error Message -->
+            <div v-if="generalError" class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-sm text-red-800 text-center">{{ generalError }}</p>
+            </div>
+
+            <!-- Success Message -->
+            <div v-if="successMessage" class="text-center text-green-500 mt-4">
+                {{ successMessage }}
+            </div>
+
+
             <form class="space-y-4" @submit.prevent="submit">
+
+
                 <BaseInput v-model="form.name" label="Full Name" placeholder="John Doe" :error="errors.name"
                     type="text" />
 
@@ -24,7 +37,7 @@
                 <BaseInput v-model="form.confirmPassword" label="Confirm Password" type="password"
                     placeholder="••••••••" :error="errors.confirmPassword" :showPassword="true" />
 
-                <BaseButton label="Create Account" block :loading="loading" />
+                <BaseButton type="submit" label="Create Account" block :loading="loading" />
             </form>
 
             <p class="text-center text-sm text-gray-500">
@@ -42,8 +55,13 @@
 import { reactive, ref } from 'vue'
 import { registerSchema, type RegisterSchema } from '../../../schemas/register.schema'
 import { ZodError } from 'zod'
-import BaseInput from '~/components/ui/BaseInput.vue'
-import BaseButton from '~/components/ui/BaseButton.vue'
+import BaseInput from '../../ui/BaseInput.vue'
+import BaseButton from '../../ui/BaseButton.vue'
+import { useAuth } from '../../../composables/useAuth'
+import { useRouter } from 'vue-router'
+
+
+
 
 const form = reactive<RegisterSchema>({
     name: '',
@@ -55,23 +73,50 @@ const form = reactive<RegisterSchema>({
 const errors = reactive<Record<string, string>>({})
 const loading = ref(false)
 const show = ref(false)
-
+const generalError = ref('')
+const successMessage = ref('')
+const { register } = useAuth()
+const router = useRouter()
 
 const submit = async () => {
     Object.keys(errors).forEach(k => delete errors[k])
+    generalError.value = ''
+    successMessage.value = ''
 
     try {
         registerSchema.parse(form)
         loading.value = true
 
+        const result = await register(form)
 
-        console.log('Register payload', form)
+        if (result.success) {
+            form.name = ''
+            form.email = ''
+            form.password = ''
+            form.confirmPassword = ''
+            successMessage.value = 'Registration successful!'
 
-        loading.value = false
+            router.push('/')
+        } else {
+            if (result.validationErrors) {
+                Object.assign(errors, result.validationErrors)
+            }
+
+            if (result.error) {
+                generalError.value = result.error
+            }
+        }
     } catch (err) {
         if (err instanceof ZodError) {
-            return err.message
+            err.issues.forEach((error: any) => {
+                const field = error.path[0] as string
+                errors[field] = error.message
+            })
+        } else {
+            generalError.value = 'An unexpected error occurred. Please try again.'
         }
+    } finally {
+        loading.value = false
     }
 }
 </script>
